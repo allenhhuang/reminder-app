@@ -15,6 +15,9 @@
 <!-- Home screen icon (simple generated icon, no external file needed) -->
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FF3B30'/%3E%3Ctext x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-family='-apple-system,Helvetica,sans-serif'%3E%E2%9C%89%EF%B8%8F%3C/text%3E%3C/svg%3E">
 
+<!-- EmailJS: sends the email silently in the background, no Mail app needed -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
 <style>
   :root {
     --bg: #f2f2f7;
@@ -264,12 +267,33 @@
   <p class="mic-status" id="micStatus">&nbsp;</p>
 
   <button class="send-btn" id="sendBtn" onclick="sendReminder()">Send Reminder</button>
-  <p class="hint">Tapping Send opens Mail with everything filled in — just tap Send once more there.</p>
+  <p class="hint">Tap Send and the email goes out automatically — no extra tap in Mail needed.</p>
 </div>
 
-<div class="toast" id="toast">Opening Mail…</div>
+<div class="toast" id="toast">Sent!</div>
 
 <script>
+  // ---------- EmailJS config ----------
+  // Fill these in with your own EmailJS values (see setup instructions).
+  const EMAILJS_PUBLIC_KEY = 'M04Fg8Ew01URGyJMB';
+  const EMAILJS_SERVICE_ID = 'service_c6pd89q';
+  const EMAILJS_TEMPLATE_ID = 'template_l2jrswb';
+
+  if (window.emailjs) {
+    emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  }
+
+  // Always start with a clean, empty box — never keep last time's text.
+  window.addEventListener('DOMContentLoaded', clearForm);
+  window.addEventListener('pageshow', clearForm); // covers iOS back-forward cache
+
+  function clearForm() {
+    const textarea = document.getElementById('message');
+    if (textarea) textarea.value = '';
+    if (typeof baseText !== 'undefined') baseText = '';
+    if (typeof isRecording !== 'undefined' && isRecording) stopRecording();
+  }
+
   function sendReminder() {
     const textarea = document.getElementById('message');
     const message = textarea.value.trim();
@@ -279,15 +303,32 @@
       return;
     }
 
-    const subject = encodeURIComponent('Reminder');
-    const body = encodeURIComponent(message);
-    const mailto = `mailto:allen.huang@ust.hk?subject=${subject}&body=${body}`;
-
+    const sendBtn = document.getElementById('sendBtn');
     const toast = document.getElementById('toast');
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 1500);
 
-    window.location.href = mailto;
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending…';
+
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      subject: 'Reminder',
+      message: message,
+      to_email: 'allen.huang@ust.hk'
+    }).then(function() {
+      toast.textContent = 'Sent!';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+      clearForm();
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Send Reminder';
+      textarea.focus();
+    }).catch(function(err) {
+      toast.textContent = 'Failed to send — try again';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Send Reminder';
+      console.error('EmailJS error:', err);
+    });
   }
 
   // Allow Cmd/Ctrl+Enter to send from keyboard too
