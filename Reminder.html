@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reminder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+
+<!-- Add to Home Screen / standalone app behavior -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Reminder">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f2f2f7">
+
+<!-- Home screen icon (simple generated icon, no external file needed) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FF3B30'/%3E%3Ctext x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-family='-apple-system,Helvetica,sans-serif'%3E%E2%9C%89%EF%B8%8F%3C/text%3E%3C/svg%3E">
+
+<style>
+  :root {
+    --bg: #f2f2f7;
+    --card: #ffffff;
+    --text: #1c1c1e;
+    --subtext: #8e8e93;
+    --blue: #007aff;
+    --border: #e5e5ea;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    color: var(--text);
+    overscroll-behavior-y: none;
+  }
+
+  /* Fake iOS status bar / nav bar */
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding-top: env(safe-area-inset-top);
+    background: rgba(242,242,247,0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .navbar-inner {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .content {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 24px 16px 40px;
+  }
+
+  .hero {
+    text-align: center;
+    margin: 20px 0 28px;
+  }
+
+  .hero .icon {
+    font-size: 56px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .hero h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 4px 0 4px;
+  }
+
+  .hero p {
+    font-size: 14px;
+    color: var(--subtext);
+    margin: 0;
+    padding: 0 20px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  .field-label {
+    font-size: 13px;
+    color: var(--subtext);
+    padding: 10px 16px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    resize: none;
+    font-size: 17px;
+    font-family: inherit;
+    color: var(--text);
+    padding: 8px 16px 16px;
+    min-height: 140px;
+    background: transparent;
+  }
+
+  textarea::placeholder { color: #c7c7cc; }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px 10px;
+    border-top: 0.5px solid var(--border);
+  }
+
+  .lang-switch {
+    display: flex;
+    background: #e9e9eb;
+    border-radius: 8px;
+    padding: 2px;
+  }
+
+  .lang-switch button {
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--subtext);
+    padding: 5px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+
+  .lang-switch button.active {
+    background: #ffffff;
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  }
+
+  .mic-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: var(--blue);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .mic-btn.recording {
+    background: #ff3b30;
+    animation: pulse 1.1s infinite;
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,59,48,0.5); }
+    70% { box-shadow: 0 0 0 10px rgba(255,59,48,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,59,48,0); }
+  }
+
+  .mic-status {
+    text-align: center;
+    font-size: 12px;
+    color: var(--blue);
+    height: 16px;
+    margin-top: 6px;
+  }
+
+  button.send-btn {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 15px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--blue);
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+
+  button.send-btn:active {
+    opacity: 0.6;
+  }
+
+  button.send-btn:disabled {
+    background: #c7c7cc;
+  }
+
+  .hint {
+    text-align: center;
+    font-size: 12px;
+    color: var(--subtext);
+    margin-top: 14px;
+    padding: 0 20px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(28,28,30,0.92);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.25s ease;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-inner">Reminder</div>
+</div>
+
+<div class="content">
+  <div class="hero">
+    <div class="icon">✉️</div>
+    <h1>Send yourself a reminder</h1>
+    <p>Type a message below. It will be emailed to allen.huang@ust.hk with the title "Reminder".</p>
+  </div>
+
+  <div class="card">
+    <div class="field-label">Message</div>
+    <textarea id="message" placeholder="What do you want to remember? (or tap the mic)" autofocus></textarea>
+    <div class="toolbar">
+      <div class="lang-switch">
+        <button type="button" id="langEn" class="active" onclick="setLang('en-US')">English</button>
+        <button type="button" id="langZh" onclick="setLang('zh-CN')">中文</button>
+      </div>
+      <button type="button" class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
+    </div>
+  </div>
+  <p class="mic-status" id="micStatus">&nbsp;</p>
+
+  <button class="send-btn" id="sendBtn" onclick="sendReminder()">Send Reminder</button>
+  <p class="hint">Tapping Send opens Mail with everything filled in — just tap Send once more there.</p>
+</div>
+
+<div class="toast" id="toast">Opening Mail…</div>
+
+<script>
+  function sendReminder() {
+    const textarea = document.getElementById('message');
+    const message = textarea.value.trim();
+
+    if (!message) {
+      textarea.focus();
+      return;
+    }
+
+    const subject = encodeURIComponent('Reminder');
+    const body = encodeURIComponent(message);
+    const mailto = `mailto:allen.huang@ust.hk?subject=${subject}&body=${body}`;
+
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1500);
+
+    window.location.href = mailto;
+  }
+
+  // Allow Cmd/Ctrl+Enter to send from keyboard too
+  document.getElementById('message').addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      sendReminder();
+    }
+  });
+
+  // ---------- Voice input (English / Chinese) ----------
+  let currentLang = 'en-US';
+  let recognition = null;
+  let isRecording = false;
+  let baseText = ''; // text already in the box before this recording session started
+
+  const micBtn = document.getElementById('micBtn');
+  const micStatus = document.getElementById('micStatus');
+  const messageBox = document.getElementById('message');
+
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  function setLang(lang) {
+    currentLang = lang;
+    document.getElementById('langEn').classList.toggle('active', lang === 'en-US');
+    document.getElementById('langZh').classList.toggle('active', lang === 'zh-CN');
+    if (isRecording) {
+      stopRecording();
+    }
+  }
+
+  function setupRecognition() {
+    recognition = new SpeechRecognitionCtor();
+    recognition.lang = currentLang;
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onresult = function(event) {
+      let finalText = '';
+      let interimText = '';
+      for (let i = 0; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += transcript;
+        } else {
+          interimText += transcript;
+        }
+      }
+      const separator = baseText && !baseText.endsWith(' ') && !baseText.endsWith('\n') ? ' ' : '';
+      messageBox.value = baseText + (finalText || interimText ? separator : '') + finalText + interimText;
+    };
+
+    recognition.onerror = function(event) {
+      micStatus.textContent = event.error === 'not-allowed'
+        ? 'Microphone access denied — enable it in Settings.'
+        : 'Voice input error: ' + event.error;
+      stopRecording();
+    };
+
+    recognition.onend = function() {
+      if (isRecording) {
+        // iOS Safari sometimes ends recognition on its own after a pause; restart it.
+        try { recognition.start(); } catch (e) { stopRecording(); }
+      }
+    };
+  }
+
+  function toggleMic() {
+    if (!SpeechRecognitionCtor) {
+      micStatus.textContent = 'Voice input isn\'t supported in this browser — please type instead.';
+      return;
+    }
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  }
+
+  function startRecording() {
+    baseText = messageBox.value.trim();
+    setupRecognition();
+    recognition.lang = currentLang;
+    try {
+      recognition.start();
+      isRecording = true;
+      micBtn.classList.add('recording');
+      micStatus.textContent = currentLang === 'zh-CN' ? '正在聆听…' : 'Listening…';
+    } catch (e) {
+      micStatus.textContent = 'Could not start voice input.';
+    }
+  }
+
+  function stopRecording() {
+    isRecording = false;
+    micBtn.classList.remove('recording');
+    micStatus.textContent = ' ';
+    if (recognition) {
+      try { recognition.stop(); } catch (e) {}
+    }
+  }
+</script>
+
+</body>
+</html>
